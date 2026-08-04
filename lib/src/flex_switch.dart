@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element_parameter
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:equatable/equatable.dart';
 import 'package:flex_switch/flex_switch.dart';
@@ -100,10 +101,8 @@ class FlexSwitch<T> extends StatefulWidget {
     this.thumbDragOnly = false,
     this.semanticsLabel,
     this.semanticValueBuilder,
-  }) : assert(
-          options.length >= 2,
-          'FlexSwitch requires at least two options',
-        );
+    this.controller,
+  }) : assert(options.length >= 2, 'FlexSwitch requires at least two options');
 
   /// Convenience constructor for a two-state boolean switch.
   ///
@@ -125,6 +124,7 @@ class FlexSwitch<T> extends StatefulWidget {
     bool allowDrag = true,
     DragCommitBehavior? dragCommitBehavior,
     bool thumbDragOnly = false,
+    FlexSwitchController? controller,
   }) {
     return FlexSwitch<bool>(
       key: key,
@@ -138,6 +138,7 @@ class FlexSwitch<T> extends StatefulWidget {
       allowDrag: allowDrag,
       dragCommitBehavior: dragCommitBehavior,
       thumbDragOnly: thumbDragOnly,
+      controller: controller,
       options: [
         SwitchOption<bool>(value: false, label: falseLabel, icon: falseIcon),
         SwitchOption<bool>(value: true, label: trueLabel, icon: trueIcon),
@@ -166,6 +167,7 @@ class FlexSwitch<T> extends StatefulWidget {
     bool allowDrag = true,
     DragCommitBehavior? dragCommitBehavior,
     bool thumbDragOnly = false,
+    FlexSwitchController? controller,
   }) {
     return FlexSwitch<E>(
       key: key,
@@ -179,6 +181,7 @@ class FlexSwitch<T> extends StatefulWidget {
       allowDrag: allowDrag,
       dragCommitBehavior: dragCommitBehavior,
       thumbDragOnly: thumbDragOnly,
+      controller: controller,
       options: values
           .map(
             (e) => SwitchOption<E>(
@@ -212,6 +215,7 @@ class FlexSwitch<T> extends StatefulWidget {
     bool allowDrag = true,
     DragCommitBehavior? dragCommitBehavior,
     bool thumbDragOnly = false,
+    FlexSwitchController? controller,
   }) {
     return FlexSwitch<V>(
       key: key,
@@ -225,6 +229,7 @@ class FlexSwitch<T> extends StatefulWidget {
       allowDrag: allowDrag,
       dragCommitBehavior: dragCommitBehavior,
       thumbDragOnly: thumbDragOnly,
+      controller: controller,
       options: values
           .map(
             (v) => SwitchOption<V>(
@@ -282,6 +287,9 @@ class FlexSwitch<T> extends StatefulWidget {
   /// Defaults to the current option's [SwitchOption.label] if available.
   final String Function(T value)? semanticValueBuilder;
 
+  /// Controls the continuous visual position without changing semantics.
+  final FlexSwitchController? controller;
+
   @override
   State<FlexSwitch<T>> createState() => _FlexSwitchState<T>();
 }
@@ -303,9 +311,25 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
   bool _thumbPressed = false;
 
   int get _selectedIndex => math.max(
-        0,
-        widget.options.indexWhere((o) => o.value == widget.selectedValue),
-      );
+    0,
+    widget.options.indexWhere((o) => o.value == widget.selectedValue),
+  );
+
+  void _handleControllerChanged() => setState(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant FlexSwitch<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller?.removeListener(_handleControllerChanged);
+    widget.controller?.addListener(_handleControllerChanged);
+  }
 
   void _announceAndChange(T value) {
     if (widget.disabled) return;
@@ -320,10 +344,7 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
     final dir = Directionality.of(context);
     // Respect RTL for left/right keys.
     final effectiveDelta = (dir == TextDirection.ltr) ? delta : -delta;
-    final next = (_selectedIndex + effectiveDelta).clamp(
-      0,
-      total - 1,
-    );
+    final next = (_selectedIndex + effectiveDelta).clamp(0, total - 1);
     _announceAndChange(widget.options[next].value);
   }
 
@@ -405,6 +426,7 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
 
   @override
   void dispose() {
+    widget.controller?.removeListener(_handleControllerChanged);
     _focusNode.dispose();
     super.dispose();
   }
@@ -422,14 +444,16 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
     final int optionCount = options.length;
     final int selectedIndex = _selectedIndex.clamp(0, optionCount - 1);
     final SwitchOption<T> selectedOption = options[selectedIndex];
-    final DragCommitBehavior effectiveCommit = widget.dragCommitBehavior ??
+    final DragCommitBehavior effectiveCommit =
+        widget.dragCommitBehavior ??
         style.dragCommitBehavior ??
         (widget.thumbDragOnly
             ? DragCommitBehavior.onRelease
             : DragCommitBehavior.immediate);
     final bool previewOnDrag = effectiveCommit == DragCommitBehavior.onRelease;
 
-    final thumbShadow = style.shadow ??
+    final thumbShadow =
+        style.shadow ??
         <BoxShadow>[
           BoxShadow(
             color: theme.colorScheme.shadow.withValues(alpha: 0.08),
@@ -461,8 +485,9 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
         ),
         _MoveToIntent: CallbackAction<_MoveToIntent>(
           onInvoke: (intent) {
-            final idx =
-                intent.index >= 0 ? intent.index : widget.options.length - 1;
+            final idx = intent.index >= 0
+                ? intent.index
+                : widget.options.length - 1;
             _announceAndChange(widget.options[idx].value);
             return null;
           },
@@ -477,7 +502,8 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
       child: Semantics(
         container: true,
         label: widget.semanticsLabel,
-        value: widget.semanticValueBuilder?.call(widget.selectedValue) ??
+        value:
+            widget.semanticValueBuilder?.call(widget.selectedValue) ??
             selectedOption.semanticsLabel ??
             selectedOption.label ??
             selectedIndex.toString(),
@@ -500,7 +526,8 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
               final textDirection = Directionality.of(context);
               const weightActive = FontWeight.w600;
               const weightInactive = FontWeight.w500;
-              final baseDefault = style.labelTextStyle ??
+              final baseDefault =
+                  style.labelTextStyle ??
                   theme.textTheme.labelLarge ??
                   const TextStyle();
               final iconSize = style.iconSize ?? math.max(16, height * 0.45);
@@ -520,8 +547,9 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
               double measureLabelWidth(SwitchOption<T> option) {
                 final label = option.label;
                 if (label == null || label.isEmpty) return 0;
-                final labelStyle = (option.textStyle ?? baseDefault)
-                    .copyWith(fontWeight: weightActive);
+                final labelStyle = (option.textStyle ?? baseDefault).copyWith(
+                  fontWeight: weightActive,
+                );
                 final painter = TextPainter(
                   text: TextSpan(text: label, style: labelStyle),
                   textDirection: textDirection,
@@ -555,43 +583,77 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                   w += style.itemPadding.horizontal;
                   intrinsic.add(w);
                 }
-                final totalIntrinsic =
-                    intrinsic.fold<double>(0, (a, b) => a + b);
+                final totalIntrinsic = intrinsic.fold<double>(
+                  0,
+                  (a, b) => a + b,
+                );
                 final scale = (totalIntrinsic == 0)
                     ? 1.0
                     : (innerWidth / totalIntrinsic).clamp(0.0, double.infinity);
-                segmentWidths =
-                    intrinsic.map((w) => w * scale).toList(growable: false);
+                segmentWidths = intrinsic
+                    .map((w) => w * scale)
+                    .toList(growable: false);
               }
 
               final int effectiveIndex =
                   previewOnDrag && _highlightedIndex != null
-                      ? _highlightedIndex!
-                      : _selectedIndex;
+                  ? _highlightedIndex!
+                  : _selectedIndex;
+              final controlledPosition = widget.controller?.position;
+              final visualPosition =
+                  (controlledPosition ?? effectiveIndex.toDouble()).clamp(
+                    0.0,
+                    count - 1.0,
+                  );
               final bool isRTL =
                   Directionality.of(context) == TextDirection.rtl;
               // Geometry uses physical left-to-right order for prefix sums.
               final List<double> segmentWidthsLTR = isRTL
                   ? segmentWidths.reversed.toList(growable: false)
                   : segmentWidths;
-              final int physicalIndexLTR =
-                  isRTL ? (count - 1 - effectiveIndex) : effectiveIndex;
-              final double prefixSum = segmentWidthsLTR
-                  .take(physicalIndexLTR)
-                  .fold<double>(0, (a, b) => a + b);
-              final bool isEdgeLeft = physicalIndexLTR == 0;
-              final bool isEdgeRight = physicalIndexLTR == count - 1;
-              final double leadingInset = isEdgeLeft ? 0.0 : gutter / 2;
-              final double trailingInset = isEdgeRight ? 0.0 : gutter / 2;
-              final left = padding + prefixSum + leadingInset;
-              final double thumbVisualWidth = math.max(
-                0,
-                segmentWidthsLTR[physicalIndexLTR] -
-                    leadingInset -
-                    trailingInset,
-              );
+              ({double left, double width}) geometryForIndex(int index) {
+                final physicalIndex = isRTL ? count - 1 - index : index;
+                final prefixSum = segmentWidthsLTR
+                    .take(physicalIndex)
+                    .fold<double>(0, (a, b) => a + b);
+                final leadingInset = physicalIndex == 0 ? 0.0 : gutter / 2;
+                final trailingInset = physicalIndex == count - 1
+                    ? 0.0
+                    : gutter / 2;
+                return (
+                  left: padding + prefixSum + leadingInset,
+                  width: math.max(
+                    0,
+                    segmentWidthsLTR[physicalIndex] -
+                        leadingInset -
+                        trailingInset,
+                  ),
+                );
+              }
 
-              final bgColor = style.backgroundColor ??
+              final lowerIndex = visualPosition.floor();
+              final upperIndex = visualPosition.ceil();
+              final fraction = visualPosition - lowerIndex;
+              final lowerGeometry = geometryForIndex(lowerIndex);
+              final upperGeometry = geometryForIndex(upperIndex);
+              final left = ui.lerpDouble(
+                lowerGeometry.left,
+                upperGeometry.left,
+                fraction,
+              )!;
+              final thumbVisualWidth = ui.lerpDouble(
+                lowerGeometry.width,
+                upperGeometry.width,
+                fraction,
+              )!;
+              final physicalIndexLTR = isRTL
+                  ? count - 1 - visualPosition.round()
+                  : visualPosition.round();
+              final isEdgeLeft = physicalIndexLTR == 0;
+              final isEdgeRight = physicalIndexLTR == count - 1;
+
+              final bgColor =
+                  style.backgroundColor ??
                   theme.colorScheme.surfaceContainerHighest.withValues(
                     alpha: 0.6,
                   );
@@ -619,14 +681,15 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                         child: Stack(
                           children: List.generate(count - 1, (i) {
                             // Divider i sits after physical segment i (LTR order).
-                            final double x = padding +
+                            final double x =
+                                padding +
                                 segmentWidthsLTR
                                     .take(i + 1)
                                     .fold<double>(0, (a, b) => a + b) -
                                 (style.dividerThickness / 2);
                             final bool touchesSelected =
                                 (i == physicalIndexLTR) ||
-                                    (i == physicalIndexLTR - 1);
+                                (i == physicalIndexLTR - 1);
                             return Positioned(
                               left: x,
                               top: padding,
@@ -635,16 +698,19 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                 width: style.dividerThickness,
                                 child: AnimatedOpacity(
                                   key: ValueKey('divider_$i'),
-                                  duration: style.dividerFadeDuration ??
+                                  duration:
+                                      style.dividerFadeDuration ??
                                       style.duration,
                                   curve: style.dividerFadeCurve ?? style.curve,
-                                  opacity: (style.hideDividersAdjacentToThumb &&
+                                  opacity:
+                                      (style.hideDividersAdjacentToThumb &&
                                           touchesSelected)
                                       ? 0.0
                                       : 1.0,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: style.dividerColor ??
+                                      color:
+                                          style.dividerColor ??
                                           theme.dividerColor.withValues(
                                             alpha: 0.35,
                                           ),
@@ -659,7 +725,9 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
 
                     // Animated thumb
                     AnimatedPositioned(
-                      duration: style.duration,
+                      duration: controlledPosition == null
+                          ? style.duration
+                          : Duration.zero,
                       curve: style.curve,
                       left: left,
                       top: padding,
@@ -679,14 +747,11 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                           final double delta = isEdgeLeft
                               ? (w - w * scale)
                               : isEdgeRight
-                                  ? (w * scale - w)
-                                  : 0.0;
+                              ? (w * scale - w)
+                              : 0.0;
                           return Transform.translate(
                             offset: Offset(-delta / 2, 0),
-                            child: Transform.scale(
-                              scale: scale,
-                              child: child,
-                            ),
+                            child: Transform.scale(scale: scale, child: child),
                           );
                         },
                         child: DecoratedBox(
@@ -707,23 +772,34 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                       child: Row(
                         children: List.generate(count, (i) {
                           final option = widget.options[i];
-                          final selected = i == effectiveIndex;
-                          final Color activeColor = option.activeColor ??
+                          final selectionProgress =
+                              (1 - (visualPosition - i).abs()).clamp(0.0, 1.0);
+                          final selected = selectionProgress > 0.5;
+                          final Color activeColor =
+                              option.activeColor ??
                               style.activeLabelColor ??
                               theme.colorScheme.primary;
-                          final Color inactiveColor = option.inactiveColor ??
+                          final Color inactiveColor =
+                              option.inactiveColor ??
                               style.inactiveLabelColor ??
-                              theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7);
-                          final baseTextStyle = option.textStyle ??
+                              theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              );
+                          final baseTextStyle =
+                              option.textStyle ??
                               style.labelTextStyle ??
                               theme.textTheme.labelLarge;
                           // Jitter-free font weight/color animation
                           final base = baseTextStyle ?? const TextStyle();
                           final displayStyle = base.copyWith(
-                            fontWeight:
-                                selected ? weightActive : weightInactive,
-                            color: selected ? activeColor : inactiveColor,
+                            fontWeight: selected
+                                ? weightActive
+                                : weightInactive,
+                            color: Color.lerp(
+                              inactiveColor,
+                              activeColor,
+                              selectionProgress,
+                            ),
                           );
                           final baseOpacity = option.enabled ? 1.0 : 0.4;
                           final reservedLabelWidth = labelReserveWidths[i];
@@ -741,10 +817,11 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                     Icon(
                                       icon,
                                       size: iconSize,
-                                      color: (selected
-                                              ? activeColor
-                                              : inactiveColor)
-                                          .withValues(alpha: baseOpacity),
+                                      color:
+                                          (selected
+                                                  ? activeColor
+                                                  : inactiveColor)
+                                              .withValues(alpha: baseOpacity),
                                     ),
                                   if (icon != null && label != null)
                                     SizedBox(width: style.gap),
@@ -757,10 +834,13 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                         duration: style.duration,
                                         curve: style.curve,
                                         style: displayStyle.copyWith(
-                                          color: (selected
-                                                  ? activeColor
-                                                  : inactiveColor)
-                                              .withValues(alpha: baseOpacity),
+                                          color:
+                                              (selected
+                                                      ? activeColor
+                                                      : inactiveColor)
+                                                  .withValues(
+                                                    alpha: baseOpacity,
+                                                  ),
                                         ),
                                         child: Text(
                                           label,
@@ -776,7 +856,8 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
 
                           // No local borderRadius var needed; InkWell uses thumbRadius directly.
                           final segmentCell = Tooltip(
-                            message: option.tooltip ??
+                            message:
+                                option.tooltip ??
                                 option.semanticsLabel ??
                                 option.label ??
                                 '',
@@ -784,22 +865,21 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                             child: Builder(
                               builder: (inkCtx) {
                                 final isPressed = _pressed.contains(i);
-                                final int physicalIndexForInk =
-                                    isRTL ? (count - 1 - i) : i;
+                                final int physicalIndexForInk = isRTL
+                                    ? (count - 1 - i)
+                                    : i;
                                 final double inkLeftInset =
                                     physicalIndexForInk == 0 ? 0.0 : gutter / 2;
                                 final double inkRightInset =
                                     physicalIndexForInk == count - 1
-                                        ? 0.0
-                                        : gutter / 2;
+                                    ? 0.0
+                                    : gutter / 2;
 
                                 return Material(
                                   type: MaterialType.transparency,
                                   child: _SegmentInkWell(
                                     onTap: (option.enabled && !widget.disabled)
-                                        ? () => _announceAndChange(
-                                              option.value,
-                                            )
+                                        ? () => _announceAndChange(option.value)
                                         : null,
                                     onHighlightChanged: (down) {
                                       setState(() {
@@ -819,9 +899,11 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                     borderRadius: BorderRadius.circular(
                                       style.thumbRadius,
                                     ),
-                                    overlayColor: style.segmentOverlayColor ??
-                                        WidgetStateProperty.resolveWith<Color?>(
-                                            (states) {
+                                    overlayColor:
+                                        style.segmentOverlayColor ??
+                                        WidgetStateProperty.resolveWith<
+                                          Color?
+                                        >((states) {
                                           final base =
                                               theme.colorScheme.onSurface;
                                           if (states.contains(
@@ -832,29 +914,23 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                           if (states.contains(
                                             WidgetState.pressed,
                                           )) {
-                                            return base.withValues(
-                                              alpha: 0.10,
-                                            );
+                                            return base.withValues(alpha: 0.10);
                                           }
                                           if (states.contains(
                                             WidgetState.hovered,
                                           )) {
-                                            return base.withValues(
-                                              alpha: 0.06,
-                                            );
+                                            return base.withValues(alpha: 0.06);
                                           }
                                           if (states.contains(
                                             WidgetState.focused,
                                           )) {
-                                            return base.withValues(
-                                              alpha: 0.08,
-                                            );
+                                            return base.withValues(alpha: 0.08);
                                           }
                                           return Colors.transparent;
                                         }),
                                     splashFactory: style.enableRipple
                                         ? (style.splashFactory ??
-                                            InkRipple.splashFactory)
+                                              InkRipple.splashFactory)
                                         : NoSplash.splashFactory,
                                     splashColor: theme.colorScheme.onSurface
                                         .withValues(alpha: 0.14),
@@ -866,7 +942,8 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                                       selected: selected,
                                       button: true,
                                       inMutuallyExclusiveGroup: true,
-                                      label: option.semanticsLabel ??
+                                      label:
+                                          option.semanticsLabel ??
                                           option.label ??
                                           'Option $i',
                                       child: SizedBox.expand(
@@ -900,7 +977,9 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                           return (layout == FlexSwitchLayout.equal)
                               ? Expanded(child: segmentCell)
                               : SizedBox(
-                                  width: segmentWidths[i], child: segmentCell);
+                                  width: segmentWidths[i],
+                                  child: segmentCell,
+                                );
                         }),
                       ),
                     ),
@@ -918,18 +997,18 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                     final Offset originLocal = _lastDragDownLocal ?? local;
                     int indexFromLocal(Offset position) =>
                         (layout == FlexSwitchLayout.equal)
-                            ? _indexFromDx(
-                                dx: position.dx,
-                                trackWidth: width,
-                                segmentWidth: equalSegmentWidth,
-                                padding: padding,
-                              )
-                            : _indexFromDxVariable(
-                                dx: position.dx,
-                                trackWidth: width,
-                                padding: padding,
-                                segmentWidths: segmentWidthsLTR,
-                              );
+                        ? _indexFromDx(
+                            dx: position.dx,
+                            trackWidth: width,
+                            segmentWidth: equalSegmentWidth,
+                            padding: padding,
+                          )
+                        : _indexFromDxVariable(
+                            dx: position.dx,
+                            trackWidth: width,
+                            padding: padding,
+                            segmentWidths: segmentWidthsLTR,
+                          );
                     final int originIndex = indexFromLocal(originLocal);
                     final int pointerIndex = indexFromLocal(local);
                     final bool startsOnSelected = originIndex == _selectedIndex;
@@ -939,8 +1018,9 @@ class _FlexSwitchState<T> extends State<FlexSwitch<T>> {
                       _lastDragDownLocal = null;
                       return;
                     }
-                    final int initialDragIndex =
-                        _nearestEnabledIndex(pointerIndex);
+                    final int initialDragIndex = _nearestEnabledIndex(
+                      pointerIndex,
+                    );
                     _lastDragIndex = initialDragIndex;
                     setState(() {
                       _thumbPressed = true;
@@ -1194,8 +1274,9 @@ class _DragGestureDetector extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragDown:
-          onDragDown == null ? null : (d) => onDragDown!(d.localPosition),
+      onHorizontalDragDown: onDragDown == null
+          ? null
+          : (d) => onDragDown!(d.localPosition),
       onHorizontalDragStart: (d) => onDragStart(d.localPosition),
       onHorizontalDragCancel: onDragEnd,
       onHorizontalDragEnd: (_) => onDragEnd(),

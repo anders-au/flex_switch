@@ -87,6 +87,25 @@ FlexSwitch.fromValues<String>(
 );
 ```
 
+## Continuous position control
+
+Use `FlexSwitchController` when another pageable control owns an in-progress
+position. Fractional values move the thumb between options without changing the
+committed `selectedValue` or its semantics.
+
+```dart
+final switchController = FlexSwitchController();
+
+switchController.syncWith(tabController.animation);
+
+FlexSwitch.fromEnum<MyTab>(
+  values: MyTab.values,
+  selectedValue: selectedTab,
+  controller: switchController,
+  onChanged: selectTab,
+);
+```
+
 ## Layouts & drag behavior
 ```dart
 FlexSwitch<int>(

@@ -2,7 +2,7 @@ name: flex_switch
 description: >
   A multi-option segmented control for Flutter.
   Keyboard accessible, RTL-aware, drag-to-select, themable, and fast.
-version: 1.2.1
+version: 1.3.0
 
 homepage: https://github.com/omar-hanafy/flex_switch
 repository: https://github.com/omar-hanafy/flex_switch

@@ -340,8 +340,9 @@ class FlexSwitchTheme extends ThemeExtension<FlexSwitchTheme> {
   /// Base defaults that respond to the ambient [ThemeData].
   static FlexSwitchStyle defaults(ThemeData theme) {
     return FlexSwitchStyle(
-      backgroundColor:
-          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.6,
+      ),
       thumbColor: theme.colorScheme.surface,
       labelTextStyle: theme.textTheme.labelLarge,
       dividerColor: theme.dividerColor.withValues(alpha: 0.35),
@@ -483,8 +484,11 @@ class FlexSwitchTheme extends ThemeExtension<FlexSwitchTheme> {
       backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
       thumbColor: Color.lerp(thumbColor, other.thumbColor, t),
       activeLabelColor: Color.lerp(activeLabelColor, other.activeLabelColor, t),
-      inactiveLabelColor:
-          Color.lerp(inactiveLabelColor, other.inactiveLabelColor, t),
+      inactiveLabelColor: Color.lerp(
+        inactiveLabelColor,
+        other.inactiveLabelColor,
+        t,
+      ),
       borderRadius: t < 0.5 ? borderRadius : other.borderRadius,
       thumbRadius: t < 0.5 ? thumbRadius : other.thumbRadius,
       thumbPressScale: t < 0.5 ? thumbPressScale : other.thumbPressScale,
@@ -503,20 +507,24 @@ class FlexSwitchTheme extends ThemeExtension<FlexSwitchTheme> {
       hideDividersAdjacentToThumb: t < 0.5
           ? hideDividersAdjacentToThumb
           : other.hideDividersAdjacentToThumb,
-      dividerFadeDuration:
-          t < 0.5 ? dividerFadeDuration : other.dividerFadeDuration,
+      dividerFadeDuration: t < 0.5
+          ? dividerFadeDuration
+          : other.dividerFadeDuration,
       dividerFadeCurve: t < 0.5 ? dividerFadeCurve : other.dividerFadeCurve,
       focusRingWidth: t < 0.5 ? focusRingWidth : other.focusRingWidth,
       enableRipple: t < 0.5 ? enableRipple : other.enableRipple,
-      segmentOverlayColor:
-          t < 0.5 ? segmentOverlayColor : other.segmentOverlayColor,
+      segmentOverlayColor: t < 0.5
+          ? segmentOverlayColor
+          : other.segmentOverlayColor,
       splashFactory: t < 0.5 ? splashFactory : other.splashFactory,
-      enableTrackHoverOverlay:
-          t < 0.5 ? enableTrackHoverOverlay : other.enableTrackHoverOverlay,
+      enableTrackHoverOverlay: t < 0.5
+          ? enableTrackHoverOverlay
+          : other.enableTrackHoverOverlay,
       segmentGutter: t < 0.5 ? segmentGutter : other.segmentGutter,
       layout: t < 0.5 ? layout : other.layout,
-      dragCommitBehavior:
-          t < 0.5 ? dragCommitBehavior : other.dragCommitBehavior,
+      dragCommitBehavior: t < 0.5
+          ? dragCommitBehavior
+          : other.dragCommitBehavior,
       inactiveScale: t < 0.5 ? inactiveScale : other.inactiveScale,
     );
   }
