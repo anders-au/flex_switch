@@ -7,9 +7,9 @@
 import 'dart:ui' as ui show SemanticsAction;
 
 import 'package:flex_switch/flex_switch.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 enum _Mode { day, night, system }
@@ -749,6 +749,43 @@ void main() {
   });
 
   group('Layout & hit-testing', () {
+    testWidgets('controller replacement retains option-update handling', (
+      tester,
+    ) async {
+      final first = _TestController(initialPosition: 0);
+      final second = _TestController(initialPosition: 1);
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      Widget host(FlexSwitchController controller, int count) => MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            child: FlexSwitch<int>(
+              controller: controller,
+              options: List.generate(
+                count,
+                (index) => SwitchOption(value: index, label: '$index'),
+              ),
+              selectedValue: 0,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(host(first, 3));
+      expect(first.isAttached, isTrue);
+      await tester.pumpWidget(host(second, 2));
+      expect(first.isAttached, isFalse);
+      expect(second.isAttached, isTrue);
+      second.position = 0.5;
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(second.isAttached, isFalse);
+    });
+
     testWidgets('controller drives fractional visual position', (tester) async {
       final controller = FlexSwitchController(initialPosition: 0);
       addTearDown(controller.dispose);
@@ -784,10 +821,7 @@ void main() {
     testWidgets('controller synchronizes directly with an animation', (
       tester,
     ) async {
-      final animation = AnimationController(
-        vsync: tester,
-        upperBound: 2,
-      );
+      final animation = AnimationController(vsync: tester, upperBound: 2);
       final controller = FlexSwitchController()..syncWith(animation);
       addTearDown(animation.dispose);
       addTearDown(controller.dispose);
@@ -890,4 +924,10 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(kMinInteractiveDimension));
     });
   });
+}
+
+class _TestController extends FlexSwitchController {
+  _TestController({super.initialPosition});
+
+  bool get isAttached => hasListeners;
 }

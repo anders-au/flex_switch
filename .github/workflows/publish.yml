@@ -1,0 +1,31 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'flex_switch-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate package, version, tag, and release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 .github/scripts/release_metadata.py check --tag "$RELEASE_TAG"
+
+  publish:
+    needs: validate-tag
+    permissions:
+      id-token: write
+    # Dart's documented canonical OIDC workflow is required at its supported v1 ref.
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1 # zizmor: ignore[unpinned-uses]

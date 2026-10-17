@@ -1,9 +1,9 @@
 import 'package:flex_switch/src/flex_switch_enums.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Visual style for FlexSwitch.
 ///
-/// All fields are optional; sensible defaults are used based on the active
+/// Constructor parameters are optional; color and typography defaults use the active
 /// [ThemeData]. Use [copyWith] to derive small variations.
 class FlexSwitchStyle {
   /// Creates a style descriptor for FlexSwitch. All parameters are optional.
@@ -136,7 +136,7 @@ class FlexSwitchStyle {
   final FlexSwitchLayout layout;
 
   /// Drag commit policy (style-level default).
-  /// When provided, overrides the widget's `dragCommitBehavior` parameter.
+  /// Used when the widget's `dragCommitBehavior` parameter is null.
   final DragCommitBehavior? dragCommitBehavior;
 
   /// Scale applied to non-selected segments.
