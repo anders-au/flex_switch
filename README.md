@@ -17,15 +17,26 @@ Multi-option segmented control for Flutter. Keyboard accessible, RTL-aware, drag
 
 ## Install
 
-```yaml
-dart pub add flex_switch
+Requires Flutter **3.47.7+** and Dart **3.13.5+**.
+
+```sh
+flutter pub add flex_switch material_ui
 ```
+
+### Upgrading from 1.x
+
+Version 2 uses the extracted `material_ui` package. Add `material_ui: ^1.6.0`
+to your dependencies and replace `package:flutter/material.dart` imports with
+`package:material_ui/material_ui.dart` in code using FlexSwitch and its Material
+theme or style types. This includes the `MaterialApp` and `ThemeData` that provide
+the switch's theme. The legacy Flutter Material types have a different identity.
+See Flutter's [Material UI migration guide](https://docs.flutter.dev/release/breaking-changes/material-ui-and-cupertino-ui).
 
 
 ## Quick start
 ```dart
 import 'package:flex_switch/flex_switch.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class Example extends StatefulWidget {
   const Example({super.key});
@@ -124,9 +135,13 @@ FlexSwitch<int>(
   thumbDragOnly: true,
 );
 
-// Disable an option (dimmed, skipped by drag selection):
+// Disable an option (dimmed and skipped by all selection inputs):
 const SwitchOption(value: 1, label: 'Two', enabled: false);
 ```
+
+An on-release preview is discarded when the pointer is canceled, option values
+or enabled states change, or the parent supplies a new selection. Disabled options cannot trigger
+`onChanged` through tapping, dragging, keyboard input, or accessibility actions.
 
 ## Styling
 
@@ -184,7 +199,9 @@ Widget-level `style` overrides still take priority over the theme extension.
 
 ## Accessibility
 - Announces labels via Semantics; exposes selected state per segment
-- Full keyboard support: Left/Right (RTL-aware), Home, End, Enter/Space
+- One keyboard tab stop per switch; Left/Right follow the visual direction
+- Home/End select the first/last enabled option; Enter/Space cycle enabled options
+- Screen-reader increase/decrease follow option order and announce the target label
 - Optional `semanticsLabel` and `tooltip` per option
 
 ## Example app
